@@ -1,0 +1,108 @@
+3a4,7
+> dir = "./src/wikimeasurements/mediawiki_modules/mediawiki-extensions-Scribunto/includes/engines/LuaCommon/lualib/"
+> local mw = require(dir .. "mw")
+> local mw_text = require(dir .. "mw_text")
+> local mw_title = require(dir .. "mw_title")
+9,10c13,14
+< local log10 = math.log10
+< local ustring = mw.ustring
+---
+> local log = math.log
+> local ustring = require(dir .. "mw_ustring")
+148,149c152,153
+< 	data_module = "Module:Convert/data" .. sandbox
+< 	text_module = "Module:Convert/text" .. sandbox
+---
+> 	data_module = "convert_data"
+> 	text_module = "convert_text"
+153,155c157,159
+< 	spell_module = "Module:ConvertNumeric"
+< 	data_code = mw.loadData(data_module)
+< 	text_code = mw.loadData(text_module)
+---
+> 	spell_module = "ConvertNumeric"
+> 	data_code = require(dir .. data_module)
+> 	text_code = require(dir .. text_module)
+265c269
+< 	local title = mw.title.getCurrentTitle()
+---
+> 	local title = "Module:Convert"
+273c277
+< 					cat = cat:sub(1, -3) .. '|' .. mw.text.nowiki(usub(catsort, 1, 20)) .. ']]'
+---
+> 					cat = cat:sub(1, -3) .. '|' .. mw_text.nowiki(usub(catsort, 1, 20)) .. ']]'
+332c336
+< 				s = mw.text.nowiki(s) .. (append or '')
+---
+> 				s = mw_text.nowiki(s) .. (append or '')
+386c390
+< 			return require(module).spell_number
+---
+> 			return require(dir .. module).spell_number
+450,454c454,458
+< 	if not parms.templatestyles[class] then
+< 		parms.templatestyles[class] = parms.frame:extensionTag({
+< 			name = 'templatestyles', args = { src = text_code.titles[class] }
+< 		})
+< 	end
+---
+> 	-- if not parms.templatestyles[class] then
+> 	-- 	parms.templatestyles[class] = parms.frame:extensionTag({
+> 	-- 		name = 'templatestyles', args = { src = text_code.titles[class] }
+> 	-- 	})
+> 	-- end
+1130c1129
+< 	local exp, fracpart = math.modf(log10(value))
+---
+> 	local exp, fracpart = math.modf(log(value,10))
+2342c2341
+< 		prec = math.max(log10(denominator), 1)
+---
+> 		prec = math.max(log(denominator,10), 1)
+2371c2370
+< 			minprec = 2 - floor(log10(kelvin) + fudge)  -- 3 sigfigs in kelvin
+---
+> 			minprec = 2 - floor(log(kelvin,10) + fudge)  -- 3 sigfigs in kelvin
+2387c2386
+< 			adjust = -log10(in_current.scale)
+---
+> 			adjust = -log(in_current.scale,10)
+2391c2390
+< 			adjust = log10(out_current.scale) + 2
+---
+> 			adjust = log(out_current.scale,10) + 2
+2393c2392
+< 			adjust = log10(abs(invalue / outvalue))
+---
+> 			adjust = log(abs(invalue / outvalue),10)
+2395c2394
+< 		adjust = adjust + log10(2)
+---
+> 		adjust = adjust + log(2,10)
+2397c2396
+< 		minprec = 1 - floor(log10(outvalue) + fudge)
+---
+> 		minprec = 1 - floor(log(outvalue,10) + fudge)
+2459c2458
+< 				adjust = log10(adjust) + log10(2),
+---
+> 				adjust = log(adjust,10) + log(2,10),
+2563c2562
+< 			local mag = floor(log10(abs(outvalue)) + 1e-14)
+---
+> 			local mag = floor(log(abs(outvalue),10) + 1e-14)
+3711c3707,3712
+< 	return true, get_styles(parms) .. wikitext, out_unit_table
+---
+> 	out_frame = {}
+> 	out_frame[1] = lhs
+> 	out_frame[2] = rhs
+> 	out_frame[3] = wikitext
+> 
+> 	return true, out_frame, out_unit_table
+3717,3718c3718,3719
+< 	set_config(frame.args)
+< 	local success, result = get_parms(parms, frame:getParent().args)
+---
+> 	set_config(frame.args)	
+> 	local success, result = get_parms(parms, frame.args)

@@ -1,0 +1,61 @@
+# Useful commands: 
+# $ snakemake --dry-run --debug-dag
+# $ snakemake --dag workflow/output/measurement_dataset.json | dot -Tsvg > workflow_dag.svg
+# Tip: If you use VS Code install the extension 'snakemake.snakemake-lang' for syntax highlighting
+
+input_dir = 'workflow/input/'
+intermediates_dir = 'workflow/intermediates/'
+output_dir = 'workflow/output/'
+
+# A target rule to define the desired final output
+rule all:
+    input: 
+        expand(output_dir + 'quantity_dataset_cluster_test_{wiki}.json', wiki=["enwiki", "simplewiki"]),
+        expand(output_dir + 'context_dataset_cluster_test_{wiki}.json', wiki=["enwiki", "simplewiki"]),
+
+rule download_wikipedia_dump:    
+    output: input_dir + '{wiki}-latest-pages-articles-multistream.xml.bz2'
+    conda: '../requirements.yml'        
+    shell: 'wget -c "https://dumps.wikimedia.org/{wildcards.wiki}/latest/{wildcards.wiki}-latest-pages-articles-multistream.xml.bz2" -P ' + input_dir
+    
+
+rule query_wikidata:    
+    output: intermediates_dir + 'wikidata_quantitative_statements_{wiki}.json'
+    conda: '../requirements.yml'
+    params: cache_dir=intermediates_dir + "wikidata_cache_{wiki}/"
+    shell: 'python src/wikimeasurements/query_wikidata.py --outfile {output} --wiki_lang {wildcards.wiki} --cache_dir {params.cache_dir}'
+
+    # Run this command on head node if compute nodes don't have internet connection:
+    #   python src/wikimeasurements/query_wikidata.py --outfile workflow/intermediates/wikidata_quantitative_statements_simplewiki.json --wiki_lang simplewiki --cache_dir workflow/intermediates/wikidata_cache_simplewiki
+
+rule parse_wikipedia_dump:
+    input: ancient(rules.download_wikipedia_dump.output)
+    output: intermediates_dir + 'parsed_dump_{wiki}.json'
+    conda: '../requirements.yml'
+    shell: 'python src/wikimeasurements/parse_wikipedia_dump.py --xml_dump_path {input} --outfile {output} --output_mode "convert"'
+
+rule get_unit_frequencies:
+    input: 
+        parsed_wiki_dump=ancient(rules.parse_wikipedia_dump.output),
+        wikidata_facts=ancient(rules.query_wikidata.output),
+    output: intermediates_dir + 'unit_freqs_{wiki}.json'
+    conda: '../requirements.yml'
+    shell: 'python src/wikimeasurements/get_unit_frequencies.py --input_path {input.parsed_wiki_dump} --wikidata_facts_path {input.wikidata_facts} --outfile {output} --nbr_pages_to_analyze 10_000 50_000'
+    
+rule create_quantity_dataset:
+    input: 
+        parsed_wiki_dump=ancient(rules.parse_wikipedia_dump.output),
+        wikidata_facts=ancient(rules.query_wikidata.output),
+        unit_frequencies=ancient(rules.get_unit_frequencies.output)
+    output: output_dir + 'quantity_dataset_cluster_test_{wiki}.json'
+    conda: '../requirements.yml'    
+    shell: 'python src/wikimeasurements/create_datasets.py --omit_context_dataset_creation --input_path {input.parsed_wiki_dump} --wikidata_facts_path {input.wikidata_facts} --unit_freqs_path {input.unit_frequencies} --outfile {output} --output_mode production --log_file ./logs/create_quantity_dataset_{wildcards.wiki}.log'
+
+rule create_context_dataset:
+    input: 
+        parsed_wiki_dump=ancient(rules.parse_wikipedia_dump.output),
+        wikidata_facts=ancient(rules.query_wikidata.output),
+        unit_frequencies=ancient(rules.get_unit_frequencies.output)
+    output: output_dir + 'context_dataset_cluster_test_{wiki}.json'
+    conda: '../requirements.yml'    
+    shell: 'python src/wikimeasurements/create_datasets.py --omit_quantity_dataset_creation --input_path {input.parsed_wiki_dump} --wikidata_facts_path {input.wikidata_facts} --unit_freqs_path {input.unit_frequencies} --outfile {output} --output_mode production --log_file ./logs/create_context_dataset_{wildcards.wiki}.log'

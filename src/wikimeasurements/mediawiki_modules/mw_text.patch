@@ -1,0 +1,12 @@
+5c5
+< local util = require 'libraryUtil'
+---
+> local util = require(dir .. 'libraryUtil')
+139,141c139,141
+< 	for k, v in pairs( options.nowiki_protocols ) do
+< 		s = string.gsub( s, k, v )
+< 	end
+---
+> 	-- for k, v in pairs( options.nowiki_protocols ) do
+> 	-- 	s = string.gsub( s, k, v )
+> 	-- end
